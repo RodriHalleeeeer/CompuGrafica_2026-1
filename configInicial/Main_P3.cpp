@@ -1,3 +1,9 @@
+//Siliano Haller Rodrigo
+//Numero de cuenta: 319039627
+//Practica 3
+//Fecha de entrega: 29/08/2025
+
+
 #include<iostream>
 
 //#define GLEW_STATIC
