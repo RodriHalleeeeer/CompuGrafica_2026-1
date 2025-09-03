@@ -23,10 +23,10 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Shader\core.frag">
+    <None Include="Shader\core.vs">
       <Filter>Archivos de origen\shader</Filter>
     </None>
-    <None Include="Shader\core.vs">
+    <None Include="Shader\core.frag">
       <Filter>Archivos de origen\shader</Filter>
     </None>
   </ItemGroup>
