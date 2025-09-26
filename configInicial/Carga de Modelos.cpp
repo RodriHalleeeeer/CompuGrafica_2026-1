@@ -1,7 +1,7 @@
 //Siliano Haller Rodrigo
 //No.cuenta: 319039627
-//Previo 6
-//Fecha de entrega: 21/09/2025
+//Practica 6
+//Fecha de entrega: 26/09/2025
 
 
 // Std. Includes
@@ -60,7 +60,7 @@ int main( )
     glfwWindowHint( GLFW_RESIZABLE, GL_FALSE );
     
     // Create a GLFWwindow object that we can use for GLFW's functions
-    GLFWwindow *window = glfwCreateWindow( WIDTH, HEIGHT, "Previo 6 - Siliano Haller Rodrigo", nullptr, nullptr );
+    GLFWwindow *window = glfwCreateWindow( WIDTH, HEIGHT, "Practica 6 - Siliano Haller Rodrigo", nullptr, nullptr );
     
     if ( nullptr == window )
     {
@@ -101,7 +101,15 @@ int main( )
     
     // Load models
     //Model dog((char*)"Models/RedDog.obj");
-    Model balon((char*)"Models/volleyball.obj");
+    Model piso((char*)"Models/pasto.obj");
+    Model tronco((char*)"Models/tronco.obj");
+    Model oso((char*)"Models/oso.obj");
+    Model pino((char*)"Models/pino.obj");
+    Model linterna((char*)"Models/linterna.obj");
+    Model mochila((char*)"Models/mochila.obj");
+    Model cuaderno((char*)"Models/cuaderno.obj");
+
+
     glm::mat4 projection = glm::perspective( camera.GetZoom( ), ( float )SCREEN_WIDTH/( float )SCREEN_HEIGHT, 0.1f, 100.0f );
     
   
@@ -131,10 +139,29 @@ int main( )
         // Draw the loaded model
         glm::mat4 model(1);
        
-        
         glUniformMatrix4fv(glGetUniformLocation(shader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
-        model = glm::scale(model, glm::vec3(2.0f, 2.0f, 2.0f));
-        balon.Draw(shader);
+
+       
+        piso.Draw(shader);
+
+       
+        
+        tronco.Draw(shader);
+
+        oso .Draw(shader);
+
+        
+        
+            
+        pino.Draw(shader);
+
+        linterna.Draw(shader);
+
+        mochila.Draw(shader);
+
+        cuaderno.Draw(shader);
+
+
 
         /*model = glm::translate(model, glm::vec3(3.0f, 0.0f, 0.0f));
         model = glm::scale(model, glm::vec3(2.0f, 2.0f, 2.0f));
