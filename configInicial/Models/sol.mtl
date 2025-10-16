@@ -1,0 +1,12 @@
+# Blender 4.5.3 LTS MTL File: 'None'
+# www.blender.org
+
+newmtl 13913_Sun
+Ns 0.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.471033 0.471033 0.471033
+Ke 1.000000 1.000000 1.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd C:/Users/Rodrigo/Downloads/Sun_v2_L3.123cbc92ee65-5f03-4298-b1e6-b236b6b8b4aa/Sun_v2_L3.123cbc92ee65-5f03-4298-b1e6-b236b6b8b4aa/13913_Sun_diff.jpg
