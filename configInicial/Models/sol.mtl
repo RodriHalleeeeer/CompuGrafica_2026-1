@@ -1,7 +1,7 @@
-# Blender 4.5.3 LTS MTL File: 'None'
+# Blender 4.5.3 LTS MTL File: 'pasto.blend'
 # www.blender.org
 
-newmtl 13913_Sun
+newmtl 13913_Sun.002
 Ns 0.000000
 Ka 1.000000 1.000000 1.000000
 Ks 0.471033 0.471033 0.471033
@@ -9,4 +9,14 @@ Ke 1.000000 1.000000 1.000000
 Ni 1.500000
 d 1.000000
 illum 2
-map_Kd C:/Users/Rodrigo/Downloads/Sun_v2_L3.123cbc92ee65-5f03-4298-b1e6-b236b6b8b4aa/Sun_v2_L3.123cbc92ee65-5f03-4298-b1e6-b236b6b8b4aa/13913_Sun_diff.jpg
+map_Kd sol.jpg
+
+newmtl Sol
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd sol.jpg
