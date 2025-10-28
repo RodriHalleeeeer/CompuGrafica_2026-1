@@ -1,7 +1,7 @@
 //Siliano Haller Rodrigo
 //No.Cuenta: 319039627
-//Previo 10
-//Fecha de entrega: 26/10/2025
+//Practica 10
+//Fecha de entrega: 31/10/2025
 
 
 
@@ -84,7 +84,6 @@ float vertices[] = {
         0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
         0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
         0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
-        0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
         0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
         0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
 
@@ -105,22 +104,47 @@ float vertices[] = {
 
 glm::vec3 Light1 = glm::vec3(0);
 
+// Órbita del perro =
+float dogTheta = 0.0f;   // ángulo actual (rad)
+float dogOrbitSpeed = 0.5f;   // rad/seg
+float dogOrbitRadius = 2.0f;   // radio de la órbita
 
-glm::vec3 ballStartPos = glm::vec3(0.0f, 0.0f, 0.0f); // posición inicial de la esfera
-glm::vec3 ballPos = ballStartPos;                // posición actual
-bool ballOscillating = false;                       // ¿animación en ejecución?
-bool ballGoingUp = true;                        // dirección actual
-float ballSpeed = 1.5f;                        // unidades/segundo
+//  Órbita de la esfera 
+float ballTheta = 0.0f;   // ángulo actual (rad)
+float ballOrbitSpeed = 0.5f;   // rad/seg
+float ballOrbitRadius = 2.0f;   // radio
+float ballYOffsetBase = 1.0f;   // altura base (+1)
+
+//  Estado para salto del perro 
+bool  dogIsJumping = false;
+float dogJumpT = 0.0f;   // progreso [0,1]
+float dogJumpDuration = 0.6f;   // s
+float dogJumpHeight = 0.6f;   // altura
+float dogJumpCooldown = 0.3f;   // s
+float dogJumpCooldownT = 0.0f;   // s restante
+float proximityThresholdXZ = 0.8f;   // umbral en XZ
+
+// movimiento de la esfera 
+bool  ballIsDipping = false;
+float ballDipT = 0.0f;   // progreso [0,1]
+float ballDipDuration = 0.6f;   // s (igual al salto del perro, ajustable)
+float ballDipDepth = 0.5f;   // cuánto baja (0.3–0.7 se ve bien)
+float ballDipCooldown = 0.3f;   // s
+float ballDipCooldownT = 0.0f;   // s restante
+
+
+glm::vec3 dogPosCur(0.0f);
+glm::vec3 ballPosCur(0.0f);
 
 // Deltatime
-GLfloat deltaTime = 0.0f;	// Time between current frame and last frame
-GLfloat lastFrame = 0.0f;  	// Time of last frame
+GLfloat deltaTime = 0.0f;
+GLfloat lastFrame = 0.0f;
 
 int main()
 {
     // Init GLFW
     glfwInit();
-    GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "Previo 10 - Siliano Haller Rodrigo", nullptr, nullptr);
+    GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "Practica 10 - Siliano Haller Rodrigo", nullptr, nullptr);
     if (nullptr == window)
     {
         std::cout << "Failed to create GLFW window" << std::endl;
@@ -168,7 +192,7 @@ int main()
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
 
-    // Uniforms materiales (como los tenías)
+    // Uniforms 
     lightingShader.Use();
     glUniform1i(glGetUniformLocation(lightingShader.Program, "Material.difuse"), 0);
     glUniform1i(glGetUniformLocation(lightingShader.Program, "Material.specular"), 1);
@@ -183,7 +207,7 @@ int main()
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
 
-        // input
+        // input & anim
         glfwPollEvents();
         DoMovement();
         Animation();
@@ -235,7 +259,7 @@ int main()
         glUniform1f(glGetUniformLocation(lightingShader.Program, "spotLight.cutOff"), glm::cos(glm::radians(12.0f)));
         glUniform1f(glGetUniformLocation(lightingShader.Program, "spotLight.outerCutOff"), glm::cos(glm::radians(18.0f)));
 
-        // Material shininess (como lo tenías nombrado)
+        // Material shininess
         glUniform1f(glGetUniformLocation(lightingShader.Program, "material.shininess"), 5.0f);
 
         // Matrices
@@ -254,20 +278,44 @@ int main()
         glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
         Piso.Draw(lightingShader);
 
-        // Perro (opaco)
-        model = glm::mat4(1);
-        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-        glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
-        Dog.Draw(lightingShader);
+        // Perro
+        {
+            // Altura del salto (si está brincando)
+            float jumpOffsetY = 0.0f;
+            if (dogIsJumping) {
+                float t = glm::clamp(dogJumpT, 0.0f, 1.0f);
+                jumpOffsetY = dogJumpHeight * 4.0f * t * (1.0f - t); // parábola
+            }
 
-        // Esfera (transparente) — SIN rotación, con traslación en Y
+            glm::vec3 renderDogPos = dogPosCur + glm::vec3(0.0f, jumpOffsetY, 0.0f);
+
+            model = glm::mat4(1);
+            model = glm::translate(model, renderDogPos);
+            // Alinea el +Z del modelo con la tangente de avance (-dogTheta)
+            model = glm::rotate(model, -dogTheta, glm::vec3(0.0f, 1.0f, 0.0f));
+
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+            glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
+            Dog.Draw(lightingShader);
+        }
+
+        //  Pelota
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        model = glm::mat4(1);
-        model = glm::translate(model, ballPos); // <-- solo traslación (sube/baja)
-        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-        glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 1);
-        Ball.Draw(lightingShader);
+        {
+            
+            float dipOffsetY = 0.0f;
+            if (ballIsDipping) {
+                float t = glm::clamp(ballDipT, 0.0f, 1.0f);
+                dipOffsetY = -ballDipDepth * 4.0f * t * (1.0f - t); 
+            }
+
+            model = glm::mat4(1);
+            model = glm::translate(model, ballPosCur + glm::vec3(0.0f, dipOffsetY, 0.0f));
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+            glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 1);
+            Ball.Draw(lightingShader);
+        }
         glDisable(GL_BLEND);
         glBindVertexArray(0);
 
@@ -296,10 +344,8 @@ int main()
     return 0;
 }
 
-// Moves/alters the camera positions based on user input
 void DoMovement()
 {
-    // Camera controls
     if (keys[GLFW_KEY_W] || keys[GLFW_KEY_UP])    camera.ProcessKeyboard(FORWARD, deltaTime);
     if (keys[GLFW_KEY_S] || keys[GLFW_KEY_DOWN])  camera.ProcessKeyboard(BACKWARD, deltaTime);
     if (keys[GLFW_KEY_A] || keys[GLFW_KEY_LEFT])  camera.ProcessKeyboard(LEFT, deltaTime);
@@ -314,7 +360,6 @@ void DoMovement()
     if (keys[GLFW_KEY_J]) pointLightPositions[0].z += 0.01f;
 }
 
-// Key callback
 void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode)
 {
     if (GLFW_KEY_ESCAPE == key && GLFW_PRESS == action)
@@ -328,7 +373,6 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode
         else if (action == GLFW_RELEASE) keys[key] = false;
     }
 
-
     if (key == GLFW_KEY_SPACE && action == GLFW_PRESS)
     {
         active = !active;
@@ -337,56 +381,69 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode
         else
             Light1 = glm::vec3(0);
     }
-
-
-    if (key == GLFW_KEY_N && action == GLFW_PRESS)
-    {
-        ballOscillating = !ballOscillating;
-
-        
-        if (ballOscillating)
-        {
-            float targetUpY = pointLightPositions[0].y;
-            float minY = std::min(ballStartPos.y, targetUpY);
-            float maxY = std::max(ballStartPos.y, targetUpY);
-
-            if (ballPos.y <= minY + 1e-3f)      ballGoingUp = true;
-            else if (ballPos.y >= maxY - 1e-3f) ballGoingUp = false;
-            // si está en medio, mantiene la dirección actual
-        }
-    }
 }
 
-// Animaciones por frame
 void Animation()
 {
-    
-    if (ballOscillating)
-    {
-        
-        float targetUpY = pointLightPositions[0].y;
+    // Avance angular
+    dogTheta += dogOrbitSpeed * deltaTime;     
+    ballTheta -= ballOrbitSpeed * deltaTime;     
 
-        float minY = std::min(ballStartPos.y, targetUpY);
-        float maxY = std::max(ballStartPos.y, targetUpY);
+   
+    dogPosCur = glm::vec3(
+        dogOrbitRadius * cosf(dogTheta),
+        0.0f,
+        dogOrbitRadius * sinf(dogTheta)
+    );
+    ballPosCur = glm::vec3(
+        ballOrbitRadius * cosf(ballTheta),
+        ballYOffsetBase,                      // Y base
+        ballOrbitRadius * sinf(ballTheta)
+    );
 
-        float step = ballSpeed * deltaTime;
-        const float eps = 1e-4f;
+    // Cooldowns
+    if (dogJumpCooldownT > 0.0f) dogJumpCooldownT = std::max(0.0f, dogJumpCooldownT - deltaTime);
+    if (ballDipCooldownT > 0.0f) ballDipCooldownT = std::max(0.0f, ballDipCooldownT - deltaTime);
 
-        if (ballGoingUp)
-        {
-            ballPos.y += step;
-            if (ballPos.y >= maxY - eps) {
-                ballPos.y = maxY;
-                ballGoingUp = false; // cambiar dirección
-            }
+    // Distancia SOLO en XZ 
+    float distXZ = glm::length(glm::vec2(
+        dogPosCur.x - ballPosCur.x,
+        dogPosCur.z - ballPosCur.z
+    ));
+
+    //salto de perro
+    if (!dogIsJumping && dogJumpCooldownT <= 0.0f) {
+        if (distXZ <= proximityThresholdXZ) {
+            dogIsJumping = true;
+            dogJumpT = 0.0f;
         }
-        else
-        {
-            ballPos.y -= step;
-            if (ballPos.y <= minY + eps) {
-                ballPos.y = minY;
-                ballGoingUp = true; // cambiar dirección
-            }
+    }
+
+  
+    if (!ballIsDipping && ballDipCooldownT <= 0.0f) {
+        if (distXZ <= proximityThresholdXZ) {
+            ballIsDipping = true;
+            ballDipT = 0.0f;
+        }
+    }
+
+   
+    if (dogIsJumping) {
+        dogJumpT += deltaTime / dogJumpDuration;
+        if (dogJumpT >= 1.0f) {
+            dogIsJumping = false;
+            dogJumpT = 0.0f;
+            dogJumpCooldownT = dogJumpCooldown;
+        }
+    }
+
+    
+    if (ballIsDipping) {
+        ballDipT += deltaTime / ballDipDuration;
+        if (ballDipT >= 1.0f) {
+            ballIsDipping = false;
+            ballDipT = 0.0f;
+            ballDipCooldownT = ballDipCooldown;
         }
     }
 }
@@ -401,11 +458,14 @@ void MouseCallback(GLFWwindow* window, double xPos, double yPos)
     }
 
     GLfloat xOffset = xPos - lastX;
-    GLfloat yOffset = lastY - yPos;  // Reversed since y-coordinates go from bottom to left
+    GLfloat yOffset = lastY - yPos;
 
     lastX = xPos;
     lastY = yPos;
 
     camera.ProcessMouseMovement(xOffset, yOffset);
 }
+
+
+
 
